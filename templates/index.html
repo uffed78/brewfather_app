@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brewfather App</title>
+    <script>
+        // Funktion för att hämta inventariet för en viss kategori
+        async function fetchInventory(category) {
+            try {
+                const response = await fetch(`/inventory/${category}`);
+                const data = await response.json();
+                if (data.error) {
+                    alert(`Error fetching ${category}: ${data.error}`);
+                } else {
+                    // Skapa en ny sektion för denna kategori
+                    const section = document.createElement('section');
+                    section.innerHTML = `<h3>${category}</h3>`;
+
+                    let table = '<table border="1"><tr><th>Name</th><th>Type</th><th>Use</th><th>Alpha</th><th>Inventory</th></tr>';
+                    data.forEach(item => {
+                        table += `<tr>
+                                    <td>${item.name}</td>
+                                    <td>${item.type}</td>
+                                    <td>${item.use}</td>
+                                    <td>${item.alpha || 'N/A'}</td>
+                                    <td>${item.inventory || 'N/A'}</td>
+                                  </tr>`;
+                    });
+                    table += '</table>';
+                    section.innerHTML += table;
+
+                    // Lägg till sektionen i inventory-container
+                    document.getElementById('inventory-container').appendChild(section);
+                }
+            } catch (error) {
+                alert(`Error fetching ${category}: ${error}`);
+            }
+        }
+
+        // Funktion för att generera recept baserat på val
+        async function generateRecipe() {
+            try {
+                const inventorySections = document.querySelectorAll('#inventory-container section');
+                let combinedInventory = [];
+                inventorySections.forEach(section => {
+                    const rows = section.querySelectorAll('tr');
+                    rows.forEach((row, index) => {
+                        if (index > 0) { // Hoppa över rubrikraden
+                            const cells = row.querySelectorAll('td');
+                            combinedInventory.push({
+                                name: cells[0].innerText,
+                                type: cells[1].innerText,
+                                use: cells[2].innerText,
+                                alpha: cells[3].innerText,
+                                inventory: cells[4].innerText
+                            });
+                        }
+                    });
+                });
+
+                // Hämta valda alternativ från formuläret
+                const measurement = document.getElementById('measurements').value;
+                const useInventory = document.querySelector('input[name="inventory"]:checked').value === 'true';
+                const beerStyle = document.getElementById('beer-style').value;
+
+                const response = await fetch('/generate_recipe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ inventory: combinedInventory, measurement: measurement, use_inventory: useInventory, beer_style: beerStyle })
+                });
+
+                const data = await response.json();
+                if (data.error) {
+                    document.getElementById('recipe').innerHTML = `<p>Error: ${data.error}</p>`;
+                } else {
+                    document.getElementById('recipe').innerText = data.recipe;
+                }
+            } catch (error) {
+                document.getElementById('recipe').innerHTML = `<p>Error generating recipe: ${error}</p>`;
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Brewfather App</h1>
+
+    <!-- Knappar för att hämta olika kategorier -->
+    <button onclick="fetchInventory('fermentables')">Fetch Fermentables</button>
+    <button onclick="fetchInventory('hops')">Fetch Hops</button>
+    <button onclick="fetchInventory('yeasts')">Fetch Yeasts</button>
+
+    <!-- Val för mätsystem och användning av inventory -->
+    <h2>Options</h2>
+    <div>
+        <label for="measurements">Select measurement system:</label>
+        <select id="measurements">
+            <option value="metric" selected>Metric</option>
+            <option value="imperial">Imperial</option>
+        </select>
+    </div>
+    <div>
+        <label>
+            <input type="radio" name="inventory" value="true" checked> Use Inventory
+        </label>
+        <label>
+            <input type="radio" name="inventory" value="false"> Ignore Inventory
+        </label>
+    </div>
+    <div>
+        <label for="beer-style">Select beer style:</label>
+        <select id="beer-style">
+            <option value="any" selected>Any style</option>
+            <option value="IPA">IPA</option>
+            <option value="Stout">Stout</option>
+            <option value="Pilsner">Pilsner</option>
+            <option value="Hefeweizen">Hefeweizen</option>
+            <option value="Belgian Tripel">Belgian Tripel</option>
+            <option value="Porter">Porter</option>
+            <option value="Lager">Lager</option>
+        </select>
+    </div>
+
+    <!-- Visar hämtat inventarie -->
+    <h2>Inventory</h2>
+    <div id="inventory-container"></div>
+
+    <!-- Receptgenerering -->
+    <h2>Generate Recipe</h2>
+    <button onclick="generateRecipe()">Generate Recipe</button>
+    <div id="recipe"></div>
+</body>
+</html>
