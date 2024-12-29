@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaktiv Receptguide</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #chat-container { max-width: 600px; margin: 0 auto; }
+        #chat-history { border: 1px solid #ddd; padding: 10px; height: 300px; overflow-y: scroll; margin-bottom: 10px; }
+        #user-input { width: 80%; padding: 5px; }
+        button { padding: 5px 10px; }
+    </style>
+</head>
+<body>
+    <h1>Interaktiv Ölbryggningsguide</h1>
+    <div id="chat-container">
+        <div id="chat-history"></div>
+        <input id="user-input" placeholder="Skriv ditt svar här..." />
+        <button onclick="sendMessage()">Skicka</button>
+    </div>
+
+    <script>
+        let chatHistory = [];
+    
+        async function sendMessage() {
+            const userMessage = document.getElementById('user-input').value;
+    
+            // Visa användarens meddelande
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML += `<p><strong>Du:</strong> ${userMessage}</p>`;
+            document.getElementById('user-input').value = "";
+    
+            try {
+                // Skicka till backend
+                const response = await fetch('/interactive_session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_message: userMessage,
+                        chat_history: chatHistory
+                    })
+                });
+    
+                const data = await response.json();
+    
+                if (data.response) {
+                    chatHistory.push({ role: "assistant", content: data.response });
+                    chatBox.innerHTML += `<p><strong>Appen:</strong> ${data.response}</p>`;
+                } else {
+                    alert("Fel: " + data.error);
+                }
+            } catch (error) {
+                console.error("Fel vid fetch:", error);
+            }
+        }
+    </script>
+    
+</body>
+</html>
